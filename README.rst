@@ -11,6 +11,7 @@ This allows you to quickly triage the cause of the failure without adding a
 lot of "debug" log messages to your modules.
 
 ::
+
     ./harness my-playbook.yml
 
 Motivation
