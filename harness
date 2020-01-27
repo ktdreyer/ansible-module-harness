@@ -1,0 +1,146 @@
+#!/usr/bin/python3
+import argparse
+from argparse import RawTextHelpFormatter
+import json
+import pdb
+from pprint import pprint  # NOQA: F401
+import re
+import sys
+from os.path import abspath, dirname, join
+from ansible.module_utils import basic
+from ansible.module_utils._text import to_bytes
+from ansible.playbook import Playbook
+from ansible.parsing.dataloader import DataLoader
+from ansible.vars.manager import VariableManager
+
+DESCRIPTION = """
+This tool reads an Ansible playbook for tasks. It runs each task and drops
+into a debugger if any of the tasks crash.
+
+Use this tool to quickly diagnose failures when developing custom Ansible
+modules.
+"""
+
+
+working_directory = dirname(abspath((__file__)))
+library_path = join(working_directory, 'library')
+if library_path not in sys.path:
+    sys.path.insert(0, library_path)
+
+
+def load_module_utils(name):
+    """
+    Load a Python library file from the local "module_utils" directory.
+
+    :param str name: eg. "common_koji", "common_errata_tool"
+    """
+    module_utils_path = join(working_directory, 'module_utils')
+
+    location = join(module_utils_path, '%s.py' % name)
+    module_name = "ansible.module_utils.%s" % name
+    if sys.version_info[0] == 3:
+        # Python 3.5+
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(module_name, location)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    if sys.version_info[0] == 2:
+        import imp
+        module = imp.load_source(module_name, location)
+    sys.modules[module_name] = module
+    import ansible.module_utils
+    setattr(ansible.module_utils, name, module)
+
+
+def load_module(module_name):
+    """ load a module from library_path. """
+    location = join(library_path, '%s.py' % module_name)
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(module_name, location)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    sys.modules[module_name] = module
+    return module
+
+
+def set_module_args(args):
+    """Copied from ansible (GPLv3)
+    """
+    if '_ansible_remote_tmp' not in args:
+        args['_ansible_remote_tmp'] = '/tmp'
+    if '_ansible_keep_remote_files' not in args:
+        args['_ansible_keep_remote_files'] = False
+
+    args = json.dumps({'ANSIBLE_MODULE_ARGS': args})
+    basic._ANSIBLE_ARGS = to_bytes(args)
+
+
+def get_plays(file_name):
+    """Read a playbook from a file and return the list of Play objects.
+    """
+    loader = DataLoader()
+    variable_manager = VariableManager(loader=loader)
+    pb = Playbook.load(file_name, variable_manager, loader)
+    plays = pb.get_plays()
+    return plays
+
+
+def get_tasks(plays):
+    """Crawl a list of Play objects and return a flat list of all the Tasks.
+    """
+    result = []
+    for play in plays:
+        tasks = play.get_tasks()
+        for subtasks in tasks:
+            for subtask in subtasks:
+                result.append(subtask)
+    return result
+
+
+def run_tasks(tasks):
+    """Run a list of Tasks and drop into PDB on failure.
+    """
+    for task in tasks:
+        print('%s - %s' % (task.action, task.name))
+        # Debugging:
+        # pprint(task.args)
+        # attribs = {attrib: getattr(task, attrib) for attrib in dir(task)}
+        # pdb.set_trace()
+        set_module_args(task.args)
+        try:
+            module = load_module(task.action)
+        except ImportError as e:
+            if e.name != 'ansible.module_utils':
+                raise
+            match = re.match("cannot import name '([^']+)'", e.msg)
+            if not match:
+                raise
+            name = match.group(1)
+            load_module_utils(name)
+            module = load_module(task.action)
+        except Exception as e:  # NOQA: F841
+            pdb.set_trace()
+        try:
+            module.main()
+        except Exception as e:  # NOQA: F841
+            pdb.set_trace()
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description=DESCRIPTION,
+                                     formatter_class=RawTextHelpFormatter)
+    parser.add_argument('playbook',
+                        help='ansible playbook file to run')
+    return parser.parse_args()
+
+
+def main():
+    args = get_args()
+    file_name = args.playbook
+    plays = get_plays(file_name)
+    tasks = get_tasks(plays)
+    run_tasks(tasks)
+
+
+if __name__ == '__main__':
+    main()
