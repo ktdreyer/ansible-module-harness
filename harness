@@ -3,6 +3,7 @@ import argparse
 from argparse import RawTextHelpFormatter
 import json
 import pdb
+import traceback
 from pprint import pprint  # NOQA: F401
 import re
 import sys
@@ -119,11 +120,15 @@ def run_tasks(tasks):
             load_module_utils(name)
             module = load_module(task.action)
         except Exception as e:  # NOQA: F841
-            pdb.set_trace()
+            extype, value, tb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(tb)
         try:
             module.main()
         except Exception as e:  # NOQA: F841
-            pdb.set_trace()
+            extype, value, tb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(tb)
 
 
 def get_args():
