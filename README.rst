@@ -50,6 +50,8 @@ This is a rough developer tool, so there are several limitations:
   will only load the modules from your local ``library`` directory.
 * Your modules must execute on localhost, not on any remote host. This is
   typical if you are developing modules that will use a web API.
+* You cannot use any variables (like ``"{{ item }}"``) in your module
+  execution. This harness does not interpolate any variables for you.
 
 License
 -------
