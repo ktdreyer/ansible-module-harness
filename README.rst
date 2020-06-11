@@ -53,6 +53,13 @@ This is a rough developer tool, so there are several limitations:
 * You cannot use any variables (like ``"{{ item }}"``) in your module
   execution. This harness does not interpolate any variables for you.
 
+See also
+--------
+- Ansible's `Playbook Debugger
+  <https://docs.ansible.com/ansible/latest/user_guide/playbooks_debugger.html>`_
+  provides an interactive shell for stepping through a playbook's tasks
+  (rather than stepping through an Ansible module's Python code).
+
 License
 -------
 
