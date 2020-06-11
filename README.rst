@@ -56,4 +56,5 @@ This is a rough developer tool, so there are several limitations:
 License
 -------
 
-This project is licensed under the GPLv3 to match Ansible's license.
+This project is licensed under the the GPLv3-or-later to match Ansible's
+license.
