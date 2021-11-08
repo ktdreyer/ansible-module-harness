@@ -60,6 +60,8 @@ See also
   provides an interactive shell for stepping through a playbook's tasks
   (rather than stepping through an Ansible module's Python code).
 
+- Feature request in Ansible: https://github.com/ansible/ansible/issues/76253
+
 License
 -------
 
