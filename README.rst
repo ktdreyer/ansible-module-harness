@@ -62,6 +62,8 @@ See also
 
 - Feature request in Ansible: https://github.com/ansible/ansible/issues/76253
 
+- Possible alternative to epdb: https://github.com/microsoft/debugpy
+
 License
 -------
 
